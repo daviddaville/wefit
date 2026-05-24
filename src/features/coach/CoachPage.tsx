@@ -102,7 +102,12 @@ export default function CoachPage() {
         }),
       })
 
-      if (!res.body) throw new Error('No stream')
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }))
+        throw new Error(err.error ?? `HTTP ${res.status}`)
+      }
+
+      if (!res.body) throw new Error('Pas de stream')
 
       const reader  = res.body.getReader()
       const decoder = new TextDecoder()
@@ -116,10 +121,10 @@ export default function CoachPage() {
           return [...prev.slice(0, -1), { ...last, content: last.content + chunk }]
         })
       }
-    } catch {
+    } catch (err: any) {
       setMessages(prev => [
         ...prev.slice(0, -1),
-        { role: 'assistant', content: "Désolé, une erreur s'est produite. Réessaie." },
+        { role: 'assistant', content: `⚠️ Erreur : ${err?.message ?? 'Connexion impossible'}` },
       ])
     } finally {
       setIsLoading(false)
