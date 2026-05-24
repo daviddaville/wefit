@@ -2,13 +2,15 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, ClipboardList, BarChart2 } from 'lucide-react'
+import { Home, ClipboardList, BarChart2, UserCircle, BookOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
-  { href: '/dashboard', label: 'Accueil',    Icon: Home },
-  { href: '/program',   label: 'Programme',  Icon: ClipboardList },
-  { href: '/history',   label: 'Historique', Icon: BarChart2 },
+  { href: '/dashboard', label: 'Accueil',   Icon: Home },
+  { href: '/program',   label: 'Programme', Icon: ClipboardList },
+  { href: '/exercises', label: 'Exercices', Icon: BookOpen },
+  { href: '/history',   label: 'Historique',Icon: BarChart2 },
+  { href: '/profile',   label: 'Vous',      Icon: UserCircle },
 ]
 
 export default function BottomNav() {

@@ -66,13 +66,37 @@ export async function getSetLogHistory(setsConfigId: string): Promise<SetLog[]> 
   return data ?? []
 }
 
+export async function getTodayActiveWorkout(userId: string): Promise<Workout & { workout_day?: { name: string } } | null> {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const { data } = await db()
+    .from('workouts')
+    .select('*, workout_day:workout_days(name)')
+    .eq('user_id', userId)
+    .is('ended_at', null)
+    .gte('started_at', today.toISOString())
+    .maybeSingle()
+  return data ?? null
+}
+
 export async function getWorkoutHistory(userId: string): Promise<Workout[]> {
   const { data, error } = await db()
     .from('workouts')
-    .select('*, workout_days(name)')
+    .select('*, workout_day:workout_days(name)')
     .eq('user_id', userId)
     .not('ended_at', 'is', null)
     .order('started_at', { ascending: false })
+  if (error) throw error
+  return data ?? []
+}
+
+export async function getWorkoutDetail(workoutId: string) {
+  const { data, error } = await db()
+    .from('set_logs')
+    .select('*, sets_config:sets_config_id(exercise_order, sets_count, rep_range_min, rep_range_max, exercise:exercises(name, muscle_group))')
+    .eq('workout_id', workoutId)
+    .order('sets_config_id')
+    .order('set_number')
   if (error) throw error
   return data ?? []
 }

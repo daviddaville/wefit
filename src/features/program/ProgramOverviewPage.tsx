@@ -9,7 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { PlayCircle, Dumbbell } from 'lucide-react'
+import { PlayCircle, Dumbbell, Pencil, Plus } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 const DAY_COLOR: Record<string, string> = {
   'haut a': 'bg-blue-500',
@@ -17,16 +18,13 @@ const DAY_COLOR: Record<string, string> = {
   'bas a':  'bg-emerald-500',
   'bas b':  'bg-teal-500',
 }
-
 function dayColor(name: string) {
   return DAY_COLOR[name.toLowerCase()] ?? 'bg-primary'
 }
 
-function WorkoutDayCard({ day }: { day: WorkoutDay }) {
+function WorkoutDayCard({ day, programId }: { day: WorkoutDay; programId: string }) {
   const router = useRouter()
   const sets = day.sets_config ?? []
-
-  // Group exercises by muscle_group
   const groups = sets.reduce<Record<string, string[]>>((acc, s) => {
     const g = s.exercise?.muscle_group ?? 'Autres'
     if (!acc[g]) acc[g] = []
@@ -37,17 +35,31 @@ function WorkoutDayCard({ day }: { day: WorkoutDay }) {
   return (
     <Card className="overflow-hidden">
       <CardHeader className="pb-0 pt-0 px-0">
-        <div className={`${dayColor(day.name)} px-4 py-3 flex items-center justify-between`}>
+        <div className={cn(dayColor(day.name), 'px-4 py-3 flex items-center justify-between')}>
           <CardTitle className="text-base font-bold text-white">{day.name}</CardTitle>
-          <Badge variant="secondary" className="bg-white/20 text-white border-0 text-xs">
-            {sets.length} exercice{sets.length > 1 ? 's' : ''}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className="bg-white/20 text-white border-0 text-xs">
+              {sets.length} ex.
+            </Badge>
+            <button
+              onClick={() => router.push(`/program/${programId}/day/${day.id}/edit`)}
+              className="p-1 rounded hover:bg-white/20 transition-colors"
+            >
+              <Pencil className="h-3.5 w-3.5 text-white" />
+            </button>
+          </div>
         </div>
       </CardHeader>
 
       <CardContent className="px-0 py-0">
         {sets.length === 0 ? (
-          <p className="text-sm text-muted-foreground px-4 py-4">Aucun exercice configuré</p>
+          <div className="px-4 py-4 flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">Aucun exercice</p>
+            <Button size="sm" variant="ghost" className="text-xs gap-1"
+              onClick={() => router.push(`/program/${programId}/day/${day.id}/edit`)}>
+              <Plus className="h-3 w-3" /> Ajouter
+            </Button>
+          </div>
         ) : (
           <>
             {Object.entries(groups).map(([group, names], idx) => (
@@ -76,10 +88,8 @@ function WorkoutDayCard({ day }: { day: WorkoutDay }) {
             ))}
             <Separator />
             <div className="px-4 py-3">
-              <Button
-                className="w-full gap-2"
-                onClick={() => router.push(`/session/${day.id}`)}
-              >
+              <Button className="w-full gap-2"
+                onClick={() => router.push(`/session/${day.id}`)}>
                 <PlayCircle className="h-4 w-4" />
                 Démarrer la séance
               </Button>
@@ -92,6 +102,8 @@ function WorkoutDayCard({ day }: { day: WorkoutDay }) {
 }
 
 export default function ProgramOverviewPage() {
+  const router = useRouter()
+
   const { data: session } = useQuery({
     queryKey: ['session'],
     queryFn: async () => {
@@ -114,23 +126,30 @@ export default function ProgramOverviewPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-xl font-bold">{program?.name ?? 'Programme'}</h2>
-        {program?.name && (
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {days.length} séance{days.length > 1 ? 's' : ''} · rotation A/B
-          </p>
-        )}
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-xl font-bold">{program?.name ?? 'Programme'}</h2>
+          {program && (
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {days.length} séance{days.length > 1 ? 's' : ''} · rotation A/B
+            </p>
+          )}
+        </div>
+        <Button size="sm" variant="outline" className="gap-1.5"
+          onClick={() => router.push('/program/create')}>
+          <Plus className="h-4 w-4" />
+          Nouveau
+        </Button>
       </div>
 
       {isLoading ? (
         <div className="space-y-3">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="h-40 rounded-xl bg-muted animate-pulse" />
-          ))}
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-40 rounded-xl bg-muted animate-pulse" />)}
         </div>
       ) : (
-        days.map(day => <WorkoutDayCard key={day.id} day={day} />)
+        days.map(day => (
+          <WorkoutDayCard key={day.id} day={day} programId={program!.id} />
+        ))
       )}
     </div>
   )

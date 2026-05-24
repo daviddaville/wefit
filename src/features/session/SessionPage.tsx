@@ -9,6 +9,7 @@ import RestTimerOverlay from './RestTimerOverlay'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/core/services/supabaseClient'
 import { Check, ChevronRight, PlayCircle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
 interface Props { workoutDayId: string }
@@ -64,10 +65,16 @@ function ExerciseRow({
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function SessionPage({ workoutDayId }: Props) {
+  const router = useRouter()
   const {
     startSession, finishSession,
     activeWorkout, currentExerciseIndex, currentSetNumber, restSecondsLeft,
   } = useWorkoutSession()
+
+  const handleFinishSession = async () => {
+    await finishSession()
+    router.push('/history')
+  }
 
   const { data: session } = useQuery({
     queryKey: ['session'],
@@ -121,13 +128,17 @@ export default function SessionPage({ workoutDayId }: Props) {
             {exercises.length} exercice{exercises.length > 1 ? 's' : ''} complété{exercises.length > 1 ? 's' : ''}
           </p>
         </div>
-        <Button onClick={() => finishSession()}>Enregistrer et quitter</Button>
+        <Button onClick={handleFinishSession}>Enregistrer et quitter</Button>
       </div>
     )
   }
 
   // ── Active session ──────────────────────────────────────────────────────────
-  const progressPct = Math.round((currentExerciseIndex / exercises.length) * 100)
+  const totalSets = exercises.reduce((acc, ex) => acc + ex.sets_count, 0)
+  const completedSets = exercises
+    .slice(0, currentExerciseIndex)
+    .reduce((acc, ex) => acc + ex.sets_count, 0) + (currentSetNumber - 1)
+  const progressPct = totalSets > 0 ? Math.round((completedSets / totalSets) * 100) : 0
 
   return (
     <div className="space-y-4 pb-24">
@@ -136,9 +147,12 @@ export default function SessionPage({ workoutDayId }: Props) {
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>Exercice {currentExerciseIndex + 1} / {exercises.length}</span>
-          <span>Série {currentSetNumber} / {currentConfig.sets_count}</span>
+          <span className="flex items-center gap-1.5">
+            <span>Série {currentSetNumber} / {currentConfig.sets_count}</span>
+            <span className="text-primary font-semibold">{progressPct}%</span>
+          </span>
         </div>
-        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+        <div className="h-2 rounded-full bg-muted overflow-hidden">
           <div
             className="h-full bg-primary rounded-full transition-all duration-500"
             style={{ width: `${progressPct}%` }}
@@ -180,7 +194,7 @@ export default function SessionPage({ workoutDayId }: Props) {
       </div>
 
       {/* Terminate button */}
-      <Button variant="ghost" size="sm" className="w-full text-muted-foreground" onClick={() => finishSession()}>
+      <Button variant="ghost" size="sm" className="w-full text-muted-foreground" onClick={handleFinishSession}>
         Terminer la séance
       </Button>
     </div>
