@@ -1,3 +1,11 @@
+export interface WeightLog {
+  id: string
+  user_id: string
+  weight_kg: number
+  logged_date: string
+  notes: string | null
+}
+
 export interface UserProfile {
   id: string
   email: string

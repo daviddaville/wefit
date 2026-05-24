@@ -12,6 +12,7 @@ import { Separator } from '@/components/ui/separator'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Progress } from '@/components/ui/progress'
 import { User, Ruler, Scale, Target, CalendarDays, CheckCircle, AlertCircle } from 'lucide-react'
+import WeightTracker from './WeightTracker'
 
 function initials(first: string, last: string) {
   return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase()
@@ -259,6 +260,11 @@ export default function ProfilePage() {
       <Button className="w-full" onClick={() => save()} disabled={isPending || !userId}>
         {isPending ? 'Enregistrement…' : 'Sauvegarder'}
       </Button>
+
+      {/* Weight tracker */}
+      {userId && (
+        <WeightTracker userId={userId} goalWeight={profile?.goal_weight_kg} />
+      )}
     </div>
   )
 }
