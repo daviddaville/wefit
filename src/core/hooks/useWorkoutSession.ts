@@ -20,7 +20,13 @@ export function useWorkoutSession() {
   )
 
   const finishSet = useCallback(
-    async (config: SetsConfig, weightKg: number, repsDone: number) => {
+    async (
+      config: SetsConfig,
+      weightKg: number,
+      repsDone: number,
+      weightLeftKg?: number | null,
+      weightRightKg?: number | null,
+    ) => {
       if (!store.activeWorkout) return
 
       const log = await logSetService({
@@ -28,11 +34,18 @@ export function useWorkoutSession() {
         sets_config_id: config.id,
         set_number: store.currentSetNumber,
         weight_kg: weightKg,
+        weight_left_kg: weightLeftKg ?? null,
+        weight_right_kg: weightRightKg ?? null,
         reps_done: repsDone,
       })
 
       store.logSet(log)
-      store.startRest(config.id, config.rest_seconds)
+      store.rememberWeight(config.id, {
+        weight: weightKg,
+        weightLeft: weightLeftKg ?? null,
+        weightRight: weightRightKg ?? null,
+      })
+      store.startRest(config.id, config.rest_seconds, config.sets_count)
       startRestTimer(config.rest_seconds)
 
       queryClient.invalidateQueries({ queryKey: ['last-performance', config.id] })

@@ -1,3 +1,6 @@
+export type ExerciseLevel = 'base' | 'advanced' | 'finishing'
+export type MuscleSide = 'anterior' | 'posterior'
+
 export interface Exercise {
   id: string
   name: string
@@ -5,7 +8,15 @@ export interface Exercise {
   equipment: string | null
   default_rest_seconds: number
   joint_notes: string | null
+  description: string | null
+  video_url: string | null
+  level: ExerciseLevel
+  muscle_side: MuscleSide
+  muscles_principaux: string[] | null
+  muscles_secondaires: string[] | null
 }
+
+export type EquipmentType = 'dumbbells' | 'ez_bar' | 'straight_bar'
 
 export interface SetsConfig {
   id: string
@@ -18,6 +29,7 @@ export interface SetsConfig {
   rest_seconds: number
   initial_weight_kg: number | null
   current_weight_kg: number | null
+  equipment_type: EquipmentType
   exercise?: Exercise
 }
 
@@ -45,6 +57,8 @@ export interface SetLog {
   sets_config_id: string
   set_number: number
   weight_kg: number
+  weight_left_kg: number | null
+  weight_right_kg: number | null
   reps_done: number
   rest_taken_seconds: number | null
   logged_at: string

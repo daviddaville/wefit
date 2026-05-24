@@ -1,10 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { SetsConfig } from '@/core/types/workout.types'
+import { SetsConfig, EquipmentType } from '@/core/types/workout.types'
 import { useWorkoutSession } from '@/core/hooks/useWorkoutSession'
 import { useLastPerformance } from '@/core/hooks/useLastPerformance'
 import { useProgressionLogic } from '@/core/hooks/useProgressionLogic'
+import { updateEquipmentType } from '@/core/services/workoutService'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
@@ -16,14 +17,46 @@ interface Props {
   config: SetsConfig
 }
 
+const EQUIPMENT_OPTIONS: { value: EquipmentType; label: string }[] = [
+  { value: 'dumbbells',     label: 'Haltères' },
+  { value: 'ez_bar',        label: 'Barre Z'  },
+  { value: 'straight_bar',  label: 'Barre ↕'  },
+]
+
 export default function ExerciseCard({ config }: Props) {
-  const { finishSet, currentSetNumber } = useWorkoutSession()
+  const { finishSet, currentSetNumber, weightMemory } = useWorkoutSession()
   const { data: lastPerf = [] } = useLastPerformance(config.id)
   const { suggestedWeight } = useProgressionLogic(config)
 
   const lastSet = lastPerf.find(l => l.set_number === currentSetNumber)
-  const [weight, setWeight] = useState(suggestedWeight || lastSet?.weight_kg || 0)
+  const defaultWeight = suggestedWeight || lastSet?.weight_kg || config.current_weight_kg || 0
+
+  // In-session memory takes priority over DB history
+  const mem = weightMemory[config.id]
+
+  const [equipment, setEquipment] = useState<EquipmentType>(config.equipment_type ?? 'dumbbells')
+  const [weight, setWeight] = useState(mem?.weight ?? defaultWeight)
+  const [weightLeft, setWeightLeft] = useState(
+    mem?.weightLeft ?? lastSet?.weight_left_kg ?? defaultWeight,
+  )
+  const [weightRight, setWeightRight] = useState(
+    mem?.weightRight ?? lastSet?.weight_right_kg ?? defaultWeight,
+  )
   const [reps, setReps] = useState(lastSet?.reps_done || config.rep_range_min)
+
+  const handleEquipmentChange = async (eq: EquipmentType) => {
+    setEquipment(eq)
+    await updateEquipmentType(config.id, eq).catch(() => {})
+  }
+
+  const handleFinish = () => {
+    if (equipment === 'dumbbells') {
+      const avg = (weightLeft + weightRight) / 2
+      finishSet(config, avg, reps, weightLeft, weightRight)
+    } else {
+      finishSet(config, weight, reps)
+    }
+  }
 
   return (
     <Card>
@@ -51,17 +84,56 @@ export default function ExerciseCard({ config }: Props) {
           {lastSet && (
             <Badge className="gap-1 text-xs bg-primary/10 text-primary border-primary/20 hover:bg-primary/15">
               <TrendingUp className="h-3 w-3" />
-              {lastSet.weight_kg} kg × {lastSet.reps_done}
+              {lastSet.weight_left_kg != null && lastSet.weight_right_kg != null
+                ? lastSet.weight_left_kg === lastSet.weight_right_kg
+                  ? `${lastSet.weight_left_kg} kg`
+                  : `G ${lastSet.weight_left_kg} / D ${lastSet.weight_right_kg} kg`
+                : `${lastSet.weight_kg} kg`} × {lastSet.reps_done}
             </Badge>
           )}
+        </div>
+
+        {/* Equipment selector */}
+        <div className="flex gap-1 pt-2">
+          {EQUIPMENT_OPTIONS.map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => handleEquipmentChange(opt.value)}
+              className={`flex-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
+                equipment === opt.value
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-border bg-background text-muted-foreground hover:bg-muted'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
         </div>
       </CardHeader>
 
       <Separator />
 
       <CardContent className="pt-4 space-y-4">
-        <WeightRepInput weight={weight} reps={reps} onWeightChange={setWeight} onRepsChange={setReps} />
-        <StartSetButton onFinish={() => finishSet(config, weight, reps)} />
+        {equipment === 'dumbbells' ? (
+          <WeightRepInput
+            mode="dual"
+            weightLeft={weightLeft}
+            weightRight={weightRight}
+            reps={reps}
+            onWeightLeftChange={setWeightLeft}
+            onWeightRightChange={setWeightRight}
+            onRepsChange={setReps}
+          />
+        ) : (
+          <WeightRepInput
+            mode="single"
+            weight={weight}
+            reps={reps}
+            onWeightChange={setWeight}
+            onRepsChange={setReps}
+          />
+        )}
+        <StartSetButton onFinish={handleFinish} />
       </CardContent>
     </Card>
   )

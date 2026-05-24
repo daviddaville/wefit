@@ -26,12 +26,22 @@ export async function logSet(payload: {
   sets_config_id: string
   set_number: number
   weight_kg: number
+  weight_left_kg?: number | null
+  weight_right_kg?: number | null
   reps_done: number
   rest_taken_seconds?: number
 }): Promise<SetLog> {
   const { data, error } = await db().from('set_logs').insert(payload).select().single()
   if (error) throw error
   return data
+}
+
+export async function updateEquipmentType(setsConfigId: string, equipmentType: string): Promise<void> {
+  const { error } = await db()
+    .from('sets_config')
+    .update({ equipment_type: equipmentType })
+    .eq('id', setsConfigId)
+  if (error) throw error
 }
 
 export async function getLastPerformance(setsConfigId: string): Promise<SetLog[]> {
@@ -43,7 +53,7 @@ export async function getLastPerformance(setsConfigId: string): Promise<SetLog[]
     .order('logged_at', { ascending: false })
     .limit(10)
   if (error) throw error
-  return data ?? []
+  return (data ?? []) as SetLog[]
 }
 
 export async function getSetLogHistory(setsConfigId: string): Promise<SetLog[]> {

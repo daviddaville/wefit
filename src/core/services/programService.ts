@@ -18,9 +18,19 @@ export async function getActiveProgram(userId: string): Promise<Program | null> 
 export async function getProgramWorkoutDays(programId: string): Promise<WorkoutDay[]> {
   const { data, error } = await db()
     .from('workout_days')
-    .select('*, sets_config(*, exercises(*))')
+    .select('*, sets_config(*, exercise:exercises(*))')
     .eq('program_id', programId)
     .order('day_order')
   if (error) throw error
   return data ?? []
+}
+
+export async function getWorkoutDayById(workoutDayId: string): Promise<WorkoutDay | null> {
+  const { data, error } = await db()
+    .from('workout_days')
+    .select('*, sets_config(*, exercise:exercises(*))')
+    .eq('id', workoutDayId)
+    .single()
+  if (error) return null
+  return data
 }
