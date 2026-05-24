@@ -53,7 +53,7 @@ wefit-rd-knowledge/
 ```
 
 Chemin de sauvegarde actuel :
-`E:\sysencom\wefit-rd-knowledge\organisations\sysencom\fiches-rd\wefit\`
+`E:\sysencom\projects\wefit\app\rd-knowledge\organisations\sysencom\fiches-rd\wefit\`
 
 ### Commandes disponibles
 
@@ -102,13 +102,13 @@ Demander `git log --oneline -5` et `git diff HEAD~1 --stat` si les infos manquen
 2. Commandes bash :
 
 ```bash
-cd E:\sysencom\wefit-rd-knowledge
-git add organisations/[org-slug]/fiches-rd/wefit/[nom-fichier].md
+cd E:\sysencom\projects\wefit\app
+git add rd-knowledge/organisations/[org-slug]/fiches-rd/wefit/[nom-fichier].md
 git commit -m "feat(rd): [org-slug] — fiche CIR/CII — [titre] [date]"
 git push origin main
 ```
 
-3. Confirmer : `✅ Fiche sauvegardée → organisations/[org-slug]/fiches-rd/wefit/[nom-fichier].md`
+3. Confirmer : `✅ Fiche sauvegardée → rd-knowledge/organisations/[org-slug]/fiches-rd/wefit/[nom-fichier].md`
 
 ### Types d'innovation éligibles au CII
 
