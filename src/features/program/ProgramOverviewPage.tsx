@@ -73,10 +73,13 @@ function WorkoutDayCard({ day, programId }: { day: WorkoutDay; programId: string
                     const s = sets.find(sc => sc.exercise?.name === name)
                     return (
                       <div key={i} className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 min-w-0">
+                        <button
+                          className="flex items-center gap-2 min-w-0 flex-1 text-left hover:text-primary transition-colors"
+                          onClick={() => s?.exercise?.id && router.push(`/exercises/${s.exercise.id}`)}
+                        >
                           <Dumbbell className="h-3 w-3 text-muted-foreground shrink-0" />
                           <p className="text-sm truncate">{name}</p>
-                        </div>
+                        </button>
                         <span className="text-xs text-muted-foreground tabular-nums shrink-0 ml-2">
                           {s?.sets_count} × {s?.rep_range_min}–{s?.rep_range_max}
                         </span>

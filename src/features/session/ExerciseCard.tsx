@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { SetsConfig, EquipmentType } from '@/core/types/workout.types'
 import { useWorkoutSession } from '@/core/hooks/useWorkoutSession'
 import { useLastPerformance } from '@/core/hooks/useLastPerformance'
@@ -9,7 +10,7 @@ import { updateEquipmentType } from '@/core/services/workoutService'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { TrendingUp, Clock, Target } from 'lucide-react'
+import { TrendingUp, Clock, Target, Minus, Plus } from 'lucide-react'
 import WeightRepInput from './WeightRepInput'
 import StartSetButton from './StartSetButton'
 
@@ -24,25 +25,22 @@ const EQUIPMENT_OPTIONS: { value: EquipmentType; label: string }[] = [
 ]
 
 export default function ExerciseCard({ config }: Props) {
-  const { finishSet, currentSetNumber, weightMemory } = useWorkoutSession()
+  const { finishSet, currentSetNumber, weightMemory, restOverride, setRestOverride } = useWorkoutSession()
   const { data: lastPerf = [] } = useLastPerformance(config.id)
   const { suggestedWeight } = useProgressionLogic(config)
+  const router = useRouter()
 
   const lastSet = lastPerf.find(l => l.set_number === currentSetNumber)
   const defaultWeight = suggestedWeight || lastSet?.weight_kg || config.current_weight_kg || 0
 
-  // In-session memory takes priority over DB history
   const mem = weightMemory[config.id]
+  const currentRest = restOverride[config.id] ?? config.rest_seconds
 
   const [equipment, setEquipment] = useState<EquipmentType>(config.equipment_type ?? 'dumbbells')
-  const [weight, setWeight] = useState(mem?.weight ?? defaultWeight)
-  const [weightLeft, setWeightLeft] = useState(
-    mem?.weightLeft ?? lastSet?.weight_left_kg ?? defaultWeight,
-  )
-  const [weightRight, setWeightRight] = useState(
-    mem?.weightRight ?? lastSet?.weight_right_kg ?? defaultWeight,
-  )
-  const [reps, setReps] = useState(lastSet?.reps_done || config.rep_range_min)
+  const [weight,      setWeight]     = useState(mem?.weight      ?? defaultWeight)
+  const [weightLeft,  setWeightLeft]  = useState(mem?.weightLeft  ?? lastSet?.weight_left_kg  ?? defaultWeight)
+  const [weightRight, setWeightRight] = useState(mem?.weightRight ?? lastSet?.weight_right_kg ?? defaultWeight)
+  const [reps,        setReps]        = useState(mem?.reps        ?? lastSet?.reps_done        ?? config.rep_range_min)
 
   const handleEquipmentChange = async (eq: EquipmentType) => {
     setEquipment(eq)
@@ -51,8 +49,7 @@ export default function ExerciseCard({ config }: Props) {
 
   const handleFinish = () => {
     if (equipment === 'dumbbells') {
-      const avg = (weightLeft + weightRight) / 2
-      finishSet(config, avg, reps, weightLeft, weightRight)
+      finishSet(config, (weightLeft + weightRight) / 2, reps, weightLeft, weightRight)
     } else {
       finishSet(config, weight, reps)
     }
@@ -63,7 +60,12 @@ export default function ExerciseCard({ config }: Props) {
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1">
-            <CardTitle className="text-base leading-tight">{config.exercise?.name}</CardTitle>
+            <CardTitle
+              className="text-base leading-tight cursor-pointer hover:text-primary transition-colors"
+              onClick={() => config.exercise?.id && router.push(`/exercises/${config.exercise.id}`)}
+            >
+              {config.exercise?.name}
+            </CardTitle>
             <p className="text-xs text-muted-foreground mt-1">{config.exercise?.muscle_group}</p>
           </div>
           <Badge variant="outline" className="shrink-0 gap-1 text-xs">
@@ -77,10 +79,25 @@ export default function ExerciseCard({ config }: Props) {
             <Target className="h-3 w-3" />
             {config.rep_range_min}–{config.rep_range_max} reps
           </Badge>
-          <Badge variant="secondary" className="gap-1 text-xs">
+
+          {/* Rest time — editable inline */}
+          <div className="flex items-center gap-1 rounded-full border px-2 py-0.5 bg-secondary text-secondary-foreground text-xs">
             <Clock className="h-3 w-3" />
-            {config.rest_seconds}s repos
-          </Badge>
+            <button
+              className="hover:text-primary transition-colors"
+              onClick={() => setRestOverride(config.id, Math.max(15, currentRest - 15))}
+            >
+              <Minus className="h-2.5 w-2.5" />
+            </button>
+            <span className="tabular-nums font-medium w-8 text-center">{currentRest}s</span>
+            <button
+              className="hover:text-primary transition-colors"
+              onClick={() => setRestOverride(config.id, currentRest + 15)}
+            >
+              <Plus className="h-2.5 w-2.5" />
+            </button>
+          </div>
+
           {lastSet && (
             <Badge className="gap-1 text-xs bg-primary/10 text-primary border-primary/20 hover:bg-primary/15">
               <TrendingUp className="h-3 w-3" />

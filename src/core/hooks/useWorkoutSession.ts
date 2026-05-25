@@ -14,6 +14,7 @@ export function useWorkoutSession() {
     async (workoutDayId: string, userId: string) => {
       const workout = await startWorkout(workoutDayId, userId)
       store.setActiveWorkout(workout)
+      store.setSessionStartedAt(Date.now())
       return workout
     },
     [store],
@@ -44,9 +45,12 @@ export function useWorkoutSession() {
         weight: weightKg,
         weightLeft: weightLeftKg ?? null,
         weightRight: weightRightKg ?? null,
+        reps: repsDone,
       })
-      store.startRest(config.id, config.rest_seconds, config.sets_count)
-      startRestTimer(config.rest_seconds)
+
+      const restDuration = store.restOverride[config.id] ?? config.rest_seconds
+      store.startRest(config.id, restDuration, config.sets_count)
+      startRestTimer(restDuration)
 
       queryClient.invalidateQueries({ queryKey: ['last-performance', config.id] })
     },
