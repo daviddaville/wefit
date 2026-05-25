@@ -112,3 +112,13 @@ export async function updateSetsConfig(
   const { error } = await db().from('sets_config').update(updates).eq('id', id)
   if (error) throw error
 }
+
+export async function reorderExercises(
+  orderedIds: { id: string; exercise_order: number }[]
+): Promise<void> {
+  await Promise.all(
+    orderedIds.map(({ id, exercise_order }) =>
+      db().from('sets_config').update({ exercise_order }).eq('id', id)
+    )
+  )
+}

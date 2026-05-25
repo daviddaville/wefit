@@ -3,7 +3,18 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
-import { getWorkoutDayById, addExerciseToDay, removeExerciseFromDay, updateSetsConfig } from '@/core/services/programService'
+import {
+  DndContext, closestCenter, PointerSensor, TouchSensor,
+  useSensor, useSensors, DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext, useSortable, verticalListSortingStrategy, arrayMove,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import {
+  getWorkoutDayById, addExerciseToDay, removeExerciseFromDay,
+  updateSetsConfig, reorderExercises,
+} from '@/core/services/programService'
 import { getExerciseCatalog } from '@/core/services/exerciseService'
 import { SetsConfig } from '@/core/types/workout.types'
 import { Card, CardContent } from '@/components/ui/card'
@@ -12,17 +23,16 @@ import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Trash2, Plus, Search, GripVertical, ChevronDown, ChevronUp } from 'lucide-react'
-import { cn } from '@/lib/utils'
 
 interface Props { dayId: string; programId: string }
 
-// Inline sets/reps editor
+// ── Config editor ─────────────────────────────────────────────────────────────
 function ConfigEditor({ config, onSave }: { config: SetsConfig; onSave: (u: Partial<SetsConfig>) => void }) {
   const [open, setOpen] = useState(false)
-  const [sets, setSets]   = useState(config.sets_count)
-  const [rmin, setRmin]   = useState(config.rep_range_min)
-  const [rmax, setRmax]   = useState(config.rep_range_max)
-  const [rest, setRest]   = useState(config.rest_seconds)
+  const [sets, setSets] = useState(config.sets_count)
+  const [rmin, setRmin] = useState(config.rep_range_min)
+  const [rmax, setRmax] = useState(config.rep_range_max)
+  const [rest, setRest] = useState(config.rest_seconds)
 
   if (!open) {
     return (
@@ -39,30 +49,29 @@ function ConfigEditor({ config, onSave }: { config: SetsConfig; onSave: (u: Part
         <div>
           <label className="text-xs text-muted-foreground">Séries</label>
           <Input type="number" value={sets} min={1} max={10}
-            onChange={e => setSets(Number(e.target.value))}
-            className="h-8 text-sm mt-1" />
+            onChange={e => setSets(Number(e.target.value))} className="h-8 text-sm mt-1" />
         </div>
         <div>
           <label className="text-xs text-muted-foreground">Repos (s)</label>
           <Input type="number" value={rest} min={0} step={15}
-            onChange={e => setRest(Number(e.target.value))}
-            className="h-8 text-sm mt-1" />
+            onChange={e => setRest(Number(e.target.value))} className="h-8 text-sm mt-1" />
         </div>
         <div>
           <label className="text-xs text-muted-foreground">Reps min</label>
           <Input type="number" value={rmin} min={1}
-            onChange={e => setRmin(Number(e.target.value))}
-            className="h-8 text-sm mt-1" />
+            onChange={e => setRmin(Number(e.target.value))} className="h-8 text-sm mt-1" />
         </div>
         <div>
           <label className="text-xs text-muted-foreground">Reps max</label>
           <Input type="number" value={rmax} min={1}
-            onChange={e => setRmax(Number(e.target.value))}
-            className="h-8 text-sm mt-1" />
+            onChange={e => setRmax(Number(e.target.value))} className="h-8 text-sm mt-1" />
         </div>
       </div>
       <div className="flex gap-2">
-        <Button size="sm" className="flex-1" onClick={() => { onSave({ sets_count: sets, rep_range_min: rmin, rep_range_max: rmax, rest_seconds: rest }); setOpen(false) }}>
+        <Button size="sm" className="flex-1" onClick={() => {
+          onSave({ sets_count: sets, rep_range_min: rmin, rep_range_max: rmax, rest_seconds: rest })
+          setOpen(false)
+        }}>
           Enregistrer
         </Button>
         <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>
@@ -73,7 +82,58 @@ function ConfigEditor({ config, onSave }: { config: SetsConfig; onSave: (u: Part
   )
 }
 
-// Exercise picker
+// ── Sortable row ──────────────────────────────────────────────────────────────
+function SortableExerciseRow({
+  s, onRemove, onSave,
+}: {
+  s: SetsConfig
+  onRemove: () => void
+  onSave: (u: Partial<SetsConfig>) => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: s.id })
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 10 : undefined,
+        opacity: isDragging ? 0.85 : 1,
+      }}
+    >
+      <CardContent className="py-3 px-4">
+        <div className="flex items-start gap-3">
+          {/* Drag handle */}
+          <button
+            className="mt-0.5 shrink-0 cursor-grab active:cursor-grabbing touch-none text-muted-foreground hover:text-foreground transition-colors"
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
+
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{s.exercise?.name ?? '—'}</p>
+            <Badge variant="secondary" className="text-xs h-4 mt-0.5">
+              {s.exercise?.muscle_group}
+            </Badge>
+            <ConfigEditor config={s} onSave={onSave} />
+          </div>
+
+          <button
+            onClick={onRemove}
+            className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors shrink-0"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+      </CardContent>
+    </div>
+  )
+}
+
+// ── Exercise picker ───────────────────────────────────────────────────────────
 function ExercisePicker({ dayId, currentCount, onAdd }: { dayId: string; currentCount: number; onAdd: () => void }) {
   const [search, setSearch] = useState('')
   const [open, setOpen] = useState(false)
@@ -144,6 +204,7 @@ function ExercisePicker({ dayId, currentCount, onAdd }: { dayId: string; current
   )
 }
 
+// ── Main ──────────────────────────────────────────────────────────────────────
 export default function EditDayPage({ dayId, programId }: Props) {
   const router = useRouter()
   const queryClient = useQueryClient()
@@ -153,9 +214,21 @@ export default function EditDayPage({ dayId, programId }: Props) {
     queryFn: () => getWorkoutDayById(dayId),
   })
 
+  // Local order state for optimistic reorder
+  const [localSets, setLocalSets] = useState<SetsConfig[] | null>(null)
+  const sets = localSets ?? day?.sets_config ?? []
+
+  // Sync local state when remote data arrives (but not during a drag)
+  if (!localSets && day?.sets_config) {
+    // handled via localSets = null → falls through to day?.sets_config
+  }
+
   const { mutate: remove } = useMutation({
     mutationFn: (id: string) => removeExerciseFromDay(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['workout-day', dayId] }),
+    onSuccess: () => {
+      setLocalSets(null)
+      queryClient.invalidateQueries({ queryKey: ['workout-day', dayId] })
+    },
   })
 
   const { mutate: update } = useMutation({
@@ -164,11 +237,37 @@ export default function EditDayPage({ dayId, programId }: Props) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['workout-day', dayId] }),
   })
 
-  const sets = day?.sets_config ?? []
+  const { mutate: reorder } = useMutation({
+    mutationFn: (ordered: { id: string; exercise_order: number }[]) => reorderExercises(ordered),
+    onSuccess: () => {
+      setLocalSets(null)
+      queryClient.invalidateQueries({ queryKey: ['workout-day', dayId] })
+    },
+  })
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor,   { activationConstraint: { delay: 200, tolerance: 5 } }),
+  )
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const oldIndex = sets.findIndex(s => s.id === active.id)
+    const newIndex = sets.findIndex(s => s.id === over.id)
+    const newOrder = arrayMove(sets, oldIndex, newIndex)
+
+    // Optimistic update
+    setLocalSets(newOrder)
+
+    // Persist
+    reorder(newOrder.map((s, i) => ({ id: s.id, exercise_order: i + 1 })))
+  }
 
   return (
     <div className="space-y-4 pb-8">
-      <Button variant="ghost" size="sm" className="-ml-2" onClick={() => router.push(`/program`)}>
+      <Button variant="ghost" size="sm" className="-ml-2" onClick={() => router.push('/program')}>
         <ArrowLeft className="h-4 w-4 mr-1" />
         Programme
       </Button>
@@ -180,48 +279,37 @@ export default function EditDayPage({ dayId, programId }: Props) {
 
       {isLoading ? (
         <div className="space-y-2">
-          {[1,2,3].map(i => <div key={i} className="h-16 rounded-xl bg-muted animate-pulse" />)}
+          {[1, 2, 3].map(i => <div key={i} className="h-16 rounded-xl bg-muted animate-pulse" />)}
         </div>
       ) : (
-        <Card className="overflow-hidden">
-          {sets.map((s, idx) => (
-            <div key={s.id}>
-              {idx > 0 && <Separator />}
-              <CardContent className="py-3 px-4">
-                <div className="flex items-start gap-3">
-                  <GripVertical className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{s.exercise?.name ?? '—'}</p>
-                    <Badge variant="secondary" className="text-xs h-4 mt-0.5">
-                      {s.exercise?.muscle_group}
-                    </Badge>
-                    <ConfigEditor
-                      config={s}
-                      onSave={updates => update({ id: s.id, updates })}
-                    />
-                  </div>
-                  <button
-                    onClick={() => remove(s.id)}
-                    className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors shrink-0"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={sets.map(s => s.id)} strategy={verticalListSortingStrategy}>
+            <Card className="overflow-hidden">
+              {sets.map((s, idx) => (
+                <div key={s.id}>
+                  {idx > 0 && <Separator />}
+                  <SortableExerciseRow
+                    s={s}
+                    onRemove={() => remove(s.id)}
+                    onSave={updates => update({ id: s.id, updates })}
+                  />
                 </div>
-              </CardContent>
-            </div>
-          ))}
-          {sets.length === 0 && (
-            <CardContent className="py-8 text-center">
-              <p className="text-sm text-muted-foreground">Aucun exercice. Ajoutez-en un ci-dessous.</p>
-            </CardContent>
-          )}
-        </Card>
+              ))}
+              {sets.length === 0 && (
+                <CardContent className="py-8 text-center">
+                  <p className="text-sm text-muted-foreground">Aucun exercice. Ajoutez-en un ci-dessous.</p>
+                </CardContent>
+              )}
+            </Card>
+          </SortableContext>
+        </DndContext>
       )}
 
       <ExercisePicker
         dayId={dayId}
         currentCount={sets.length}
         onAdd={() => {
+          setLocalSets(null)
           queryClient.invalidateQueries({ queryKey: ['workout-day', dayId] })
           queryClient.invalidateQueries({ queryKey: ['workout-days'] })
         }}
