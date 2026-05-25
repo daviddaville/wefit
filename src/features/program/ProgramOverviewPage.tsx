@@ -12,14 +12,19 @@ import { Separator } from '@/components/ui/separator'
 import { PlayCircle, Dumbbell, Pencil, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const DAY_COLOR: Record<string, string> = {
-  'haut a': 'bg-blue-500',
-  'haut b': 'bg-indigo-500',
-  'bas a':  'bg-emerald-500',
-  'bas b':  'bg-teal-500',
-}
+const PALETTE = [
+  'bg-blue-600',
+  'bg-indigo-600',
+  'bg-emerald-600',
+  'bg-teal-600',
+  'bg-violet-600',
+  'bg-rose-600',
+  'bg-amber-600',
+  'bg-cyan-600',
+]
 function dayColor(name: string) {
-  return DAY_COLOR[name.toLowerCase()] ?? 'bg-primary'
+  const hash = [...name].reduce((acc, c) => acc + c.charCodeAt(0), 0)
+  return PALETTE[hash % PALETTE.length]
 }
 
 function WorkoutDayCard({ day, programId }: { day: WorkoutDay; programId: string }) {
