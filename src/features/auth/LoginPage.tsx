@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Dumbbell, Mail, Lock, CheckCircle, AlertCircle } from 'lucide-react'
+import Link from 'next/link'
 
 type Mode = 'password' | 'magic'
 
@@ -149,6 +150,12 @@ export default function LoginPage() {
                 >
                   {mode === 'password' ? 'Connexion par lien magique' : 'Connexion par mot de passe'}
                 </Button>
+                <p className="text-center text-xs text-muted-foreground">
+                  Pas encore de compte ?{' '}
+                  <Link href="/signup" className="text-primary hover:underline">
+                    Créer un compte
+                  </Link>
+                </p>
               </>
             )}
           </CardContent>
