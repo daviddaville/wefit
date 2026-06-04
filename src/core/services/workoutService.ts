@@ -93,7 +93,7 @@ export async function getWorkoutHistory(userId: string): Promise<Workout[]> {
 export async function getWorkoutDetail(workoutId: string) {
   const { data, error } = await db()
     .from('set_logs')
-    .select('*, sets_config:sets_config_id(exercise_order, sets_count, rep_range_min, rep_range_max, exercise:exercises(name, muscle_group))')
+    .select('*, sets_config:sets_config_id(exercise_order, sets_count, rep_range_min, rep_range_max, rest_seconds, exercise:exercises(name, muscle_group))')
     .eq('workout_id', workoutId)
     .order('sets_config_id')
     .order('set_number')
