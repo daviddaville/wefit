@@ -33,13 +33,19 @@ function useElapsedTimer(startedAt: number | null) {
   return elapsed
 }
 
-function ExerciseRow({ config, status }: { config: SetsConfig; status: 'done' | 'current' | 'upcoming' }) {
+function ExerciseRow({
+  config, status, volume,
+}: {
+  config: SetsConfig
+  status: 'done' | 'current' | 'upcoming'
+  volume: number
+}) {
   return (
     <div className={cn(
       'flex items-center gap-3 px-4 py-2.5 transition-colors',
       status === 'current'  && 'bg-primary/8',
-      status === 'done'     && 'opacity-40',
-      status === 'upcoming' && 'opacity-60',
+      status === 'done'     && 'opacity-60',
+      status === 'upcoming' && 'opacity-40',
     )}>
       <div className={cn(
         'h-6 w-6 rounded-full flex items-center justify-center shrink-0 text-xs font-bold',
@@ -61,9 +67,9 @@ function ExerciseRow({ config, status }: { config: SetsConfig; status: 'done' | 
           {config.sets_count} × {config.rep_range_min}–{config.rep_range_max}
         </p>
       </div>
-      {config.exercise?.muscle_group && (
-        <span className="text-xs text-muted-foreground shrink-0 hidden sm:block">
-          {config.exercise.muscle_group}
+      {status === 'done' && volume > 0 && (
+        <span className="text-xs font-semibold text-green-600 dark:text-green-400 tabular-nums shrink-0">
+          {Math.round(volume)} kg
         </span>
       )}
     </div>
@@ -166,23 +172,40 @@ export default function SessionPage({ workoutDayId }: Props) {
     .reduce((acc, ex) => acc + ex.sets_count, 0) + (currentSetNumber - 1)
   const progressPct = totalSets > 0 ? Math.round((completedSets / totalSets) * 100) : 0
 
+  // Volume per sets_config_id and cumulative
+  const volumeByConfig = setLogs.reduce<Record<string, number>>((acc, log) => {
+    const v = (log.weight_kg ?? 0) * (log.reps_done ?? 0)
+    acc[log.sets_config_id] = (acc[log.sets_config_id] ?? 0) + v
+    return acc
+  }, {})
+  const cumulativeVolume = Object.values(volumeByConfig).reduce((a, b) => a + b, 0)
+
   return (
     <div className="space-y-4 pb-24">
 
       {/* Chrono + progression */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          {/* Elapsed timer — very visible */}
+          {/* Elapsed timer */}
           <div className="flex items-center gap-1.5">
             <Timer className="h-4 w-4 text-primary" />
             <span className="font-mono text-xl font-bold tabular-nums text-primary">
               {formatElapsed(elapsed)}
             </span>
           </div>
-          <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-            <span>Série {currentSetNumber}/{currentConfig.sets_count}</span>
-            <span className="font-semibold text-primary">{progressPct}%</span>
-          </span>
+          <div className="flex items-center gap-2">
+            {cumulativeVolume > 0 && (
+              <span className="text-xs font-semibold text-green-600 dark:text-green-400 tabular-nums">
+                {cumulativeVolume >= 1000
+                  ? `${(cumulativeVolume / 1000).toFixed(1)} t`
+                  : `${Math.round(cumulativeVolume)} kg`}
+              </span>
+            )}
+            <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+              <span>Série {currentSetNumber}/{currentConfig.sets_count}</span>
+              <span className="font-semibold text-primary">{progressPct}%</span>
+            </span>
+          </div>
         </div>
 
         <div className="h-2 rounded-full bg-muted overflow-hidden">
@@ -217,6 +240,7 @@ export default function SessionPage({ workoutDayId }: Props) {
               key={ex.id}
               config={ex}
               status={idx < currentExerciseIndex ? 'done' : idx === currentExerciseIndex ? 'current' : 'upcoming'}
+              volume={volumeByConfig[ex.id] ?? 0}
             />
           ))}
         </div>
