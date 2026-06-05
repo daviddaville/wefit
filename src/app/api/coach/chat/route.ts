@@ -19,7 +19,12 @@ function buildSystemPrompt(personaId: PersonaId, userContext: any) {
 
   return `${persona.systemPrompt}
 ${ctx ? `\n--- Athlète ---\n${ctx}\n---------------\n` : ''}
-Réponds en français. Sois concis (2-4 phrases max) sauf si une analyse est demandée.`
+Réponds en français. Sois concis (2-4 phrases max) sauf si une analyse est demandée.
+
+RÈGLES ABSOLUES — ne jamais enfreindre :
+1. Ne JAMAIS recommander, mentionner ou suggérer une application concurrente (Strong, Hevy, FitBod, MyFitnessPal, Strava, etc.). Tu es le coach de WeFit, point.
+2. Si l'athlète demande de créer ou générer un programme personnalisé, réponds UNIQUEMENT : "Utilise le bouton **Diagnostic** en haut de l'écran — je vais analyser ton profil et créer ton programme directement dans WeFit !" (adapte le ton à ta personnalité). Ne propose jamais un programme en texte libre.
+3. Ne suggère que des exercices présents dans le catalogue WeFit. Si tu ne connais pas le catalogue exact, reste général (groupes musculaires) sans nommer d'exercices spécifiques.`
 }
 
 export async function POST(req: NextRequest) {
