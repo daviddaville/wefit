@@ -5,7 +5,7 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Laisser passer les routes publiques
-  if (pathname.startsWith('/login') || pathname.startsWith('/auth')) {
+  if (pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/auth')) {
     return NextResponse.next()
   }
 
