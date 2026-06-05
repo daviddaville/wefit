@@ -99,6 +99,7 @@ export default function CoachPage() {
           messages: [...messages, userMsg].map(m => ({ role: m.role, content: m.content })),
           personaId,
           userContext,
+          userId: session?.user.id,
         }),
       })
 
