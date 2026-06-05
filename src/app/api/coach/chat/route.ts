@@ -199,12 +199,13 @@ export async function POST(req: NextRequest) {
 
       // Execute tool calls
       for (const toolCall of choice.message.tool_calls ?? []) {
-        const args = JSON.parse(toolCall.function.arguments)
+        const tc = toolCall as OpenAI.Chat.ChatCompletionMessageToolCall & { function: { name: string; arguments: string } }
+        const args = JSON.parse(tc.function.arguments)
         let result: string
 
-        if (toolCall.function.name === 'get_exercise_catalog') {
+        if (tc.function.name === 'get_exercise_catalog') {
           result = await execGetCatalog(args)
-        } else if (toolCall.function.name === 'create_program') {
+        } else if (tc.function.name === 'create_program') {
           if (!userId) {
             result = JSON.stringify({ ok: false, error: 'userId manquant' })
           } else {
@@ -216,7 +217,7 @@ export async function POST(req: NextRequest) {
 
         conversationMessages.push({
           role: 'tool',
-          tool_call_id: toolCall.id,
+          tool_call_id: tc.id,
           content: result,
         })
       }
