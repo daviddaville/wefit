@@ -10,7 +10,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ArrowLeft, Plus, X } from 'lucide-react'
 
-const DEFAULT_DAYS = ['Haut A', 'Haut B', 'Bas A', 'Bas B']
+const DEFAULT_DAYS = ['Haut du corps A', 'Haut du corps B', 'Bas du corps A', 'Bas du corps B']
+const DAY_COUNT_OPTIONS = [1, 2, 3, 4, 5, 6, 7]
 
 export default function CreateProgramPage() {
   const router = useRouter()
@@ -41,6 +42,14 @@ export default function CreateProgramPage() {
   })
 
   const removeDay = (idx: number) => setDays(d => d.filter((_, i) => i !== idx))
+
+  const setDayCount = (count: number) => {
+    setDays(d => {
+      if (count <= d.length) return d.slice(0, count)
+      const extra = Array.from({ length: count - d.length }, (_, i) => `Jour ${d.length + i + 1}`)
+      return [...d, ...extra]
+    })
+  }
 
   const addDay = () => {
     const trimmed = newDay.trim()
@@ -95,6 +104,24 @@ export default function CreateProgramPage() {
         <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Séances ({days.length})
         </h3>
+
+        <div>
+          <label className="text-sm font-medium text-muted-foreground">Nombre de jours par semaine</label>
+          <div className="mt-1.5 flex flex-wrap gap-2">
+            {DAY_COUNT_OPTIONS.map(n => (
+              <Button
+                key={n}
+                type="button"
+                variant={days.length === n ? 'default' : 'outline'}
+                size="sm"
+                className="h-9 w-9 p-0"
+                onClick={() => setDayCount(n)}
+              >
+                {n}
+              </Button>
+            ))}
+          </div>
+        </div>
 
         <Card className="overflow-hidden">
           {days.map((day, idx) => (
