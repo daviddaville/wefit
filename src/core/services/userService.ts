@@ -10,7 +10,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
 }
 
 export async function upsertUserProfile(profile: Partial<UserProfile> & { id: string }): Promise<UserProfile> {
-  const { data, error } = await db().from('users').upsert(profile).select().single()
+  const { data, error } = await db().from('users').upsert(profile, { onConflict: 'id' }).select().single()
   if (error) throw error
   return data
 }

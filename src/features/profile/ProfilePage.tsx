@@ -52,11 +52,12 @@ export default function ProfilePage() {
     setInitialized(true)
   }
 
-  const { mutate: save, isPending, isSuccess, isError } = useMutation({
+  const { mutate: save, isPending, isSuccess, isError, error: saveError } = useMutation({
     mutationFn: () => {
       const fullName = `${firstName.trim()} ${lastName.trim()}`.trim()
       return upsertUserProfile({
         id: userId!,
+        email: profile?.email ?? session?.user.email ?? '',
         first_name: firstName.trim() || null,
         last_name: lastName.trim() || null,
         full_name: fullName || (profile?.full_name ?? ''),
@@ -253,7 +254,7 @@ export default function ProfilePage() {
       {isError && (
         <div className="flex items-center gap-2 rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           <AlertCircle className="h-4 w-4 shrink-0" />
-          Erreur lors de l&apos;enregistrement
+          Erreur lors de l&apos;enregistrement{saveError instanceof Error ? ` : ${saveError.message}` : ''}
         </div>
       )}
 
